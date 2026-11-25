@@ -1,0 +1,2 @@
+# Version of svc-b running in prod (copied from staging).
+tag: "none"
