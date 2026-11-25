@@ -1,6 +1,8 @@
+# Cuts a release branch (release/<date>) from main. Run it by hand.
+# It does not pick a version: release-please decides that later on the branch.
 name: start-release
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # only runs when you start it by hand
 permissions:
   contents: write
 jobs:
@@ -13,8 +15,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # List branches that start with release/ (empty if none)
           open=$(gh api "repos/${GITHUB_REPOSITORY}/branches" --paginate -q '.[].name | select(startswith("release/"))')
+          # Stop if a release is already open
           [ -z "$open" ] || { echo "::error::A release is already open: $open"; exit 1; }
+          # Branch name from today's date, e.g. release/2026-11-25
           b="release/$(date -u +%Y-%m-%d)"
+          # Push the current main commit as the new branch
           git push origin "HEAD:refs/heads/$b"
+          # Show the result on the run's Summary page
           echo "Cut $b from main@${GITHUB_SHA::7}" >> "$GITHUB_STEP_SUMMARY"
