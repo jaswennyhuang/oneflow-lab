@@ -9,7 +9,10 @@ jobs:
   cut:
     runs-on: ubuntu-latest
     steps:
+      # LAB_TOKEN, not GITHUB_TOKEN: the new branch must start release.yml (release-please)
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.LAB_TOKEN }}
       # OneFlow: one release branch at a time, cut from main.
       - name: Cut the release branch
         env:

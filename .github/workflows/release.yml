@@ -1,45 +1,19 @@
-# Platform release: release-please on the release branch, then prod.
+# Platform release PR: release-please on the release branch.
+# Merging the release PR creates the platform tag (e.g. v1.1.0); deploy-prod.yml takes it from there.
 name: release
 on:
   push:
     branches: ['release/**']
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   release-please:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    outputs:
-      created: ${{ steps.rp.outputs.release_created }}
-      tag: ${{ steps.rp.outputs.tag_name }}
     steps:
-      # Opens/updates the platform release PR into this release branch.
-      # Merging it creates the platform tag (e.g. v1.1.0).
+      # target-branch: work on this release branch, not main
+      # LAB_TOKEN: so the tag it creates can start deploy-prod.yml
       - uses: googleapis/release-please-action@v4
-        id: rp
         with:
           target-branch: ${{ github.ref_name }}
           token: ${{ secrets.LAB_TOKEN }}
-
-  deploy-prod:
-    needs: release-please
-    # Only when the release PR was just merged (a tag was created)
-    if: needs.release-please.outputs.created == 'true'
-    runs-on: ubuntu-latest
-    environment: prod   # waits for a reviewer to approve
-    concurrency:
-      group: deploy-prod
-      cancel-in-progress: false
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.release-please.outputs.tag }}
-      # Fake deploy: print what prod should run now.
-      - name: Deploy prod
-        run: |
-          echo "### Prod now runs (platform ${{ needs.release-please.outputs.tag }})" >> "$GITHUB_STEP_SUMMARY"
-          for f in environments/prod/*.yaml; do
-            echo "- $(basename "$f" .yaml): $(grep '^tag:' "$f" | cut -d'"' -f2)" >> "$GITHUB_STEP_SUMMARY"
-          done
