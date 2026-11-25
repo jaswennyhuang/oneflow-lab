@@ -1,0 +1,38 @@
+# Copies the staging versions into the prod files, inside the platform release PR.
+# So the release PR shows exactly what will change in prod.
+name: prepare-prod
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: ['release/**']
+permissions:
+  contents: write
+concurrency:
+  group: prepare-prod-${{ github.event.pull_request.number }}
+  cancel-in-progress: true   # only the newest run matters; it is not a deploy
+jobs:
+  copy:
+    # Only the release-please PR, e.g. "chore(release/2026-11-25): release 1.1.0"
+    if: startsWith(github.event.pull_request.title, 'chore(release/')
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the release PR's own branch
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Copy staging versions to prod
+        run: |
+          mkdir -p environments/prod
+          for f in environments/staging/*.yaml; do
+            s=$(basename "$f" .yaml)
+            # Same tag line as staging, e.g. tag: "v0.2.0"
+            { echo "# Version of $s running in prod (copied from staging)."; grep '^tag:' "$f"; } > "environments/prod/$s.yaml"
+          done
+          git add environments/prod
+          # Nothing changed? Then stop here.
+          git diff --cached --quiet && { echo "Prod already matches staging"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(prod): copy staging versions to prod"
+          # GITHUB_TOKEN push: it does not start other workflows, so no loop
+          git push
