@@ -1,0 +1,23 @@
+name: deploy-dev
+on:
+  push:
+    branches: [main]
+    paths: ['environments/dev/**']
+permissions:
+  contents: read
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      # Fake deploy: print what dev should run now.
+      - name: Deploy dev
+        run: |
+          echo "### Dev now runs" >> "$GITHUB_STEP_SUMMARY"
+          for f in environments/dev/*.yaml; do
+            echo "- $(basename "$f" .yaml): $(grep '^tag:' "$f" | cut -d'"' -f2)" >> "$GITHUB_STEP_SUMMARY"
+          done
