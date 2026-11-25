@@ -1,0 +1,2 @@
+# Version of svc-a running in prod (copied from staging).
+tag: "v0.3.0"
