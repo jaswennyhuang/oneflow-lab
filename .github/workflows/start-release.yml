@@ -1,0 +1,20 @@
+name: start-release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # OneFlow: one release branch at a time, cut from main.
+      - name: Cut the release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open=$(gh api "repos/${GITHUB_REPOSITORY}/branches" --paginate -q '.[].name | select(startswith("release/"))')
+          [ -z "$open" ] || { echo "::error::A release is already open: $open"; exit 1; }
+          b="release/$(date -u +%Y-%m-%d)"
+          git push origin "HEAD:refs/heads/$b"
+          echo "Cut $b from main@${GITHUB_SHA::7}" >> "$GITHUB_STEP_SUMMARY"

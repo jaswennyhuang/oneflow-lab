@@ -1,0 +1,23 @@
+name: deploy-staging
+on:
+  push:
+    branches: ['release/**']
+    paths: ['environments/staging/**']
+permissions:
+  contents: read
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      # Fake deploy: print what staging should run now.
+      - name: Deploy staging
+        run: |
+          echo "### Staging now runs (from $GITHUB_REF_NAME)" >> "$GITHUB_STEP_SUMMARY"
+          for f in environments/staging/*.yaml; do
+            echo "- $(basename "$f" .yaml): $(grep '^tag:' "$f" | cut -d'"' -f2)" >> "$GITHUB_STEP_SUMMARY"
+          done
