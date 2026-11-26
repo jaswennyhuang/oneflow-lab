@@ -1,9 +1,9 @@
-# Platform release PR: release-please on the release branch.
+# Platform release PR: release-please on the release branch (or a hotfix branch).
 # Merging the release PR creates the platform tag (e.g. v1.1.0); deploy-prod.yml takes it from there.
 name: release
 on:
   push:
-    branches: ['release/**']
+    branches: ['release/**', 'hotfix/**']
 permissions:
   contents: write
   pull-requests: write
@@ -17,3 +17,5 @@ jobs:
         with:
           target-branch: ${{ github.ref_name }}
           token: ${{ secrets.LAB_TOKEN }}
+          # hotfix/* branches bump the patch (v1.2.0 -> v1.2.1)
+          config-file: ${{ startsWith(github.ref_name, 'hotfix/') && 'release-please-config.hotfix.json' || 'release-please-config.json' }}

@@ -1,0 +1,44 @@
+# Rolls prod back to an older platform release, as a reviewed PR.
+# It copies ALL prod files from that release: the whole set goes back together.
+name: rollback
+on:
+  workflow_dispatch:
+    inputs:
+      to_version:
+        description: 'Platform version to go back to, e.g. v1.1.0'
+        required: true
+permissions:
+  contents: read
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      # LAB_TOKEN: so the new branch and PR start other workflows
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.LAB_TOKEN }}
+          fetch-depth: 0   # all history and tags
+      - name: Open the rollback PR
+        env:
+          GH_TOKEN: ${{ secrets.LAB_TOKEN }}
+          TO: ${{ inputs.to_version }}
+        run: |
+          # The platform version prod runs now = the newest v* tag
+          cur=$(git tag -l 'v*' --sort=-v:refname | head -1)
+          git rev-parse -q --verify "refs/tags/$TO" >/dev/null || { echo "::error::No tag $TO"; exit 1; }
+          [ "$TO" != "$cur" ] || { echo "::error::Prod already runs $TO"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 1. Hotfix branch from what prod runs now
+          hb="hotfix/$cur-rollback"
+          git checkout -q -b "$hb" "$cur"
+          git push -q origin "$hb"
+          # 2. On a work branch, take the prod folder exactly as it was in the older release
+          wb="rollback/to-$TO"
+          git checkout -q -b "$wb"
+          git checkout "$TO" -- environments/prod/
+          git commit -m "fix(prod): roll back prod to $TO"
+          git push -q origin "$wb"
+          # 3. PR into the hotfix branch: the reviewer sees every prod file that goes back
+          gh pr create --base "$hb" --head "$wb" --title "fix(prod): roll back prod to $TO" \
+            --body "Prod runs $cur. This PR sets every prod file back to $TO. After merge, merge the release PR to tag and deploy."

@@ -8,3 +8,4 @@ Holds which version of each service runs in each environment.
 - `environments/prod/<service>.yaml`: filled by `prepare-prod` inside the platform release PR (copied from staging).
 - `release.yml`: on a `release/*` branch, release-please opens the platform release PR. Merging it tags `vX.Y.Z`.
 - `deploy-prod.yml`: a new `vX.Y.Z` tag deploys **prod** after approval.
+- `rollback.yml`: run by hand with an older platform tag. It opens a PR that sets ALL prod files back to that release, on a `hotfix/*` branch. Merge it, then merge the release PR (patch bump) → tag → deploy-prod.
